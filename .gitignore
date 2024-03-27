@@ -131,3 +131,9 @@ dmypy.json
 .DS_Store
 
 .idea/
+
+LA/
+LA_denoised/
+LA_silence/
+LA_for/
+breakdown
