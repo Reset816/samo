@@ -98,6 +98,8 @@ def init_params():
     parser.add_argument('--init_center', type=int, default=1, help='initialized center with orthogonal embeds')
     parser.add_argument('--update_stop', type=int, default=None, help='stop updating centers after x epochs')
     parser.add_argument("--center_sampler", type=str, default="sequential", choices=["sequential", "random"])
+    parser.add_argument("--eval_other", action='store_true', help="eval other model instead of samo")
+
 
     args = parser.parse_args()
 
@@ -661,8 +663,10 @@ def update_embeds(device, enroll_model, loader):
 def test(args):
     torch.set_default_tensor_type(torch.FloatTensor)
     os.makedirs('./test_scores', exist_ok=True)
-    save_path = f"./test_scores/{args.save_score}.txt"
-
+    if args.eval_other:
+        save_path = f"/data_hdd/lx20/ty_workspace/fastaudio_group/fastaudio_ori/Fastaudio/predictions/scores_with_system_id.txt"
+    else:
+        save_path = f"./test_scores/{args.save_score}.txt"
     if os.path.exists(save_path):
         print("Calculating on existing score file...\n")
         compute_eer_tdcf(args, save_path)
