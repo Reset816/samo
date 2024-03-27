@@ -27,7 +27,7 @@ def init_params():
     parser.add_argument("-d", "--path_to_database", type=str, help="dataset path",
                         default='/data2/sivan/')
     parser.add_argument("-p", "--path_to_protocol", type=str, help="protocol path",
-                        default='../protocols/')
+                        default='./protocols/')
     parser.add_argument("-o", "--out_fold", type=str, help="output folder", required=False, default='./models/try/')
     parser.add_argument("--overwrite", action='store_true', help="overwrite output folder")
 
@@ -162,13 +162,13 @@ def get_loader(args):
     target_only = args.target
     batch_size = args.batch_size
 
-    trn_database_path = os.path.join(database_path + "LA/ASVspoof2019_LA_train/")
-    dev_database_path = os.path.join(database_path + "LA/ASVspoof2019_LA_dev/")
-    eval_database_path = os.path.join(database_path + "LA/ASVspoof2019_LA_eval/")
+    trn_database_path = os.path.join(database_path + "ASVspoof2019_LA_train/")
+    dev_database_path = os.path.join(database_path + "ASVspoof2019_LA_dev/")
+    eval_database_path = os.path.join(database_path + "ASVspoof2019_LA_eval/")
 
-    trn_list_path = "protocols/ASVspoof2019.LA.cm.train.trn.txt"
-    dev_trial_path = "protocols/ASVspoof2019.LA.cm.dev.trl.txt"
-    eval_trial_path = "protocols/ASVspoof2019.LA.cm.eval.trl.txt"
+    trn_list_path = os.path.join(args.path_to_protocol + "ASVspoof2019.LA.cm.train.trn.txt")
+    dev_trial_path = os.path.join(args.path_to_protocol + "ASVspoof2019.LA.cm.dev.trl.txt")
+    eval_trial_path = os.path.join(args.path_to_protocol + "ASVspoof2019.LA.cm.eval.trl.txt")
 
     dev_enroll_path = ["protocols/ASVspoof2019.LA.asv.dev.female.trn.txt",
                        "protocols/ASVspoof2019.LA.asv.dev.male.trn.txt"]
