@@ -148,6 +148,15 @@ def compute_eer_tdcf(args, cm_score_file):
             f_res.write(
                 f'\tEER {attack_type}\t\t= {_eer:8.9f} % \n'
             )
+        print()
+        for attack_type in attack_types:
+            _eer = eer_cm_lst[attack_type] * 100
+            f_res.write(
+                f'& {round(_eer,2)}\%\t'
+            )
+        f_res.write(
+                f'& {round(eer_cm * 100,2)} \%\n'
+            )
     os.system(f"cat {output_file}")
 
     return eer_cm, min_tDCF
