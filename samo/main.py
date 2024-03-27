@@ -99,6 +99,7 @@ def init_params():
     parser.add_argument('--update_stop', type=int, default=None, help='stop updating centers after x epochs')
     parser.add_argument("--center_sampler", type=str, default="sequential", choices=["sequential", "random"])
     parser.add_argument("--eval_other", action='store_true', help="eval other model instead of samo")
+    parser.add_argument('--is_2019', type=int, default=1, help="if the dataset is not ASVspoof2019, it lacks an enrollment file; therefore, skip the update_embeds() function")
 
 
     args = parser.parse_args()
@@ -270,25 +271,30 @@ def get_loader(args):
         dev_loader = None
         dev_enroll = None
 
-    # Read eval enrollment data
-    label_eval_enroll, file_eval_enroll, utt2spk_eval_enroll, tag_eval_enroll = genSpoof_list(dir_meta=eval_enroll_path,
-                                                                                              enroll=True,
-                                                                                              train=False)
-    eval_enroll_spk = set(utt2spk_eval_enroll.values())
-    eval_centers = len(eval_enroll_spk)
-    print(f"no. eval enrollment files: {len(file_eval_enroll)}")
-    print(f"no. eval enrollment speakers: {eval_centers}")
-    eval_set_enroll = ASVspoof2019_speaker_raw(list_IDs=file_eval_enroll,
-                                               labels=label_eval_enroll,
-                                               utt2spk=utt2spk_eval_enroll,
-                                               base_dir=eval_database_path,
-                                               tag_list=tag_eval_enroll,
-                                               train=False)
-    eval_enroll = DataLoader(eval_set_enroll,
-                             batch_size=batch_size,
-                             shuffle=False,
-                             drop_last=False,
-                             pin_memory=True)
+    if args.is_2019:
+        # Read eval enrollment data
+        label_eval_enroll, file_eval_enroll, utt2spk_eval_enroll, tag_eval_enroll = genSpoof_list(dir_meta=eval_enroll_path,
+                                                                                                enroll=True,
+                                                                                                train=False)
+        eval_enroll_spk = set(utt2spk_eval_enroll.values())
+        eval_centers = len(eval_enroll_spk)
+        print(f"no. eval enrollment files: {len(file_eval_enroll)}")
+        print(f"no. eval enrollment speakers: {eval_centers}")
+        eval_set_enroll = ASVspoof2019_speaker_raw(list_IDs=file_eval_enroll,
+                                                labels=label_eval_enroll,
+                                                utt2spk=utt2spk_eval_enroll,
+                                                base_dir=eval_database_path,
+                                                tag_list=tag_eval_enroll,
+                                                train=False)
+        eval_enroll = DataLoader(eval_set_enroll,
+                                batch_size=batch_size,
+                                shuffle=False,
+                                drop_last=False,
+                                pin_memory=True)
+    else:
+        eval_enroll_spk = list()
+        eval_centers = None
+        eval_enroll = list()
 
     # Read eval target-only data
     label_eval, file_eval, utt2spk_eval, tag_eval = genSpoof_list(dir_meta=eval_trial_path, enroll=False, train=False,
@@ -709,7 +715,9 @@ def test(args):
 
             ip1_loader, utt_loader, idx_loader, score_loader, spk_loader, tag_loader = [], [], [], [], [], []
 
-            if args.scoring == "samo":
+            eval_enroll=None
+            # if args.scoring == "samo":
+            if args.is_2019 and args.scoring == "samo":
                 if args.val_sp:
                     # define and update eval centers
                     eval_enroll = update_embeds(args.device, feat_model, eval_enroll_loader)
