@@ -177,90 +177,98 @@ def get_loader(args):
     eval_enroll_path = ["protocols/ASVspoof2019.LA.asv.eval.female.trn.txt",
                         "protocols/ASVspoof2019.LA.asv.eval.male.trn.txt"]
 
-    # Read all training data
-    label_trn, file_train, utt2spk_train, tag_train = genSpoof_list(dir_meta=trn_list_path, enroll=False, train=True)
-    trn_centers = len(set(utt2spk_train.values()))
-    print("no. training files:", len(file_train))
-    print("no. training speakers:", trn_centers)
-    train_set = ASVspoof2019_speaker_raw(list_IDs=file_train,
-                                         labels=label_trn,
-                                         utt2spk=utt2spk_train,
-                                         base_dir=trn_database_path,
-                                         tag_list=tag_train,
-                                         train=True)
-    gen = torch.Generator()
-    gen.manual_seed(seed)
-    trn_loader = DataLoader(train_set,
-                            batch_size=batch_size,
-                            shuffle=True,
-                            drop_last=True,
-                            pin_memory=True,
-                            worker_init_fn=seed_worker,
-                            generator=gen)
+    if not args.test_only:
+        # Read all training data
+        label_trn, file_train, utt2spk_train, tag_train = genSpoof_list(dir_meta=trn_list_path, enroll=False, train=True)
+        trn_centers = len(set(utt2spk_train.values()))
+        print("no. training files:", len(file_train))
+        print("no. training speakers:", trn_centers)
+        train_set = ASVspoof2019_speaker_raw(list_IDs=file_train,
+                                            labels=label_trn,
+                                            utt2spk=utt2spk_train,
+                                            base_dir=trn_database_path,
+                                            tag_list=tag_train,
+                                            train=True)
+        gen = torch.Generator()
+        gen.manual_seed(seed)
+        trn_loader = DataLoader(train_set,
+                                batch_size=batch_size,
+                                shuffle=True,
+                                drop_last=True,
+                                pin_memory=True,
+                                worker_init_fn=seed_worker,
+                                generator=gen)
 
-    # Read bona-fide-only training data
-    num_bonafide_train = 2580
-    train_set_fix = ASVspoof2019_speaker_raw(list_IDs=file_train,
-                                             labels=label_trn,
-                                             utt2spk=utt2spk_train,
-                                             base_dir=trn_database_path,
-                                             tag_list=tag_train,
-                                             train=False)
-    trn_bona_set = Subset(train_set_fix, range(num_bonafide_train))
-    if args.center_sampler == "random":
-        trn_bona = DataLoader(trn_bona_set,
-                              batch_size=batch_size,
-                              shuffle=True,
-                              drop_last=False,
-                              pin_memory=True,
-                              worker_init_fn=seed_worker,
-                              generator=gen)
-    elif args.center_sampler == "sequential":
-        trn_bona = DataLoader(trn_bona_set,
-                              batch_size=int(args.batch_size),
-                              shuffle=False,
-                              drop_last=False,
-                              pin_memory=True
-                              # sampler=torch_sampler.SequentialSampler(range(num_bonafide_train))
-                              )
+        # Read bona-fide-only training data
+        num_bonafide_train = 2580
+        train_set_fix = ASVspoof2019_speaker_raw(list_IDs=file_train,
+                                                labels=label_trn,
+                                                utt2spk=utt2spk_train,
+                                                base_dir=trn_database_path,
+                                                tag_list=tag_train,
+                                                train=False)
+        trn_bona_set = Subset(train_set_fix, range(num_bonafide_train))
+        if args.center_sampler == "random":
+            trn_bona = DataLoader(trn_bona_set,
+                                batch_size=batch_size,
+                                shuffle=True,
+                                drop_last=False,
+                                pin_memory=True,
+                                worker_init_fn=seed_worker,
+                                generator=gen)
+        elif args.center_sampler == "sequential":
+            trn_bona = DataLoader(trn_bona_set,
+                                batch_size=int(args.batch_size),
+                                shuffle=False,
+                                drop_last=False,
+                                pin_memory=True
+                                # sampler=torch_sampler.SequentialSampler(range(num_bonafide_train))
+                                )
+        else:
+            raise NotImplementedError
+
+        # Read dev enrollment data
+        label_dev_enroll, file_dev_enroll, utt2spk_dev_enroll, tag_dev_enroll = genSpoof_list(dir_meta=dev_enroll_path,
+                                                                                            enroll=True,
+                                                                                            train=False)
+        dev_enroll_spk = set(utt2spk_dev_enroll.values())
+        dev_centers = len(dev_enroll_spk)
+        print(f"no. validation enrollment files: {len(file_dev_enroll)}")
+        print(f"no. validation enrollment speakers: {dev_centers}")
+        dev_set_enroll = ASVspoof2019_speaker_raw(list_IDs=file_dev_enroll,
+                                                labels=label_dev_enroll,
+                                                utt2spk=utt2spk_dev_enroll,
+                                                base_dir=dev_database_path,
+                                                tag_list=tag_dev_enroll,
+                                                train=False)
+        dev_enroll = DataLoader(dev_set_enroll,
+                                batch_size=args.batch_size,
+                                shuffle=False,
+                                drop_last=False,
+                                pin_memory=True)
+
+        # Read target-only dev data
+        label_dev, file_dev, utt2spk_dev, tag_dev = genSpoof_list(dir_meta=dev_trial_path, enroll=False, train=False,
+                                                                target_only=target_only, enroll_spk=dev_enroll_spk)
+        print(f"no. validation files: {len(file_dev)}")
+        dev_set = ASVspoof2019_speaker_raw(list_IDs=file_dev,
+                                        labels=label_dev,
+                                        utt2spk=utt2spk_dev,
+                                        base_dir=dev_database_path,
+                                        tag_list=tag_dev,
+                                        train=False)
+        dev_loader = DataLoader(dev_set,
+                                batch_size=args.batch_size,
+                                shuffle=False,
+                                drop_last=False,
+                                pin_memory=True)
     else:
-        raise NotImplementedError
-
-    # Read dev enrollment data
-    label_dev_enroll, file_dev_enroll, utt2spk_dev_enroll, tag_dev_enroll = genSpoof_list(dir_meta=dev_enroll_path,
-                                                                                          enroll=True,
-                                                                                          train=False)
-    dev_enroll_spk = set(utt2spk_dev_enroll.values())
-    dev_centers = len(dev_enroll_spk)
-    print(f"no. validation enrollment files: {len(file_dev_enroll)}")
-    print(f"no. validation enrollment speakers: {dev_centers}")
-    dev_set_enroll = ASVspoof2019_speaker_raw(list_IDs=file_dev_enroll,
-                                              labels=label_dev_enroll,
-                                              utt2spk=utt2spk_dev_enroll,
-                                              base_dir=dev_database_path,
-                                              tag_list=tag_dev_enroll,
-                                              train=False)
-    dev_enroll = DataLoader(dev_set_enroll,
-                            batch_size=args.batch_size,
-                            shuffle=False,
-                            drop_last=False,
-                            pin_memory=True)
-
-    # Read target-only dev data
-    label_dev, file_dev, utt2spk_dev, tag_dev = genSpoof_list(dir_meta=dev_trial_path, enroll=False, train=False,
-                                                              target_only=target_only, enroll_spk=dev_enroll_spk)
-    print(f"no. validation files: {len(file_dev)}")
-    dev_set = ASVspoof2019_speaker_raw(list_IDs=file_dev,
-                                       labels=label_dev,
-                                       utt2spk=utt2spk_dev,
-                                       base_dir=dev_database_path,
-                                       tag_list=tag_dev,
-                                       train=False)
-    dev_loader = DataLoader(dev_set,
-                            batch_size=args.batch_size,
-                            shuffle=False,
-                            drop_last=False,
-                            pin_memory=True)
+        trn_centers = None
+        trn_loader = None
+        trn_bona = None
+        dev_centers = None
+        dev_loader = None
+        dev_enroll = None
 
     # Read eval enrollment data
     label_eval_enroll, file_eval_enroll, utt2spk_eval_enroll, tag_eval_enroll = genSpoof_list(dir_meta=eval_enroll_path,
